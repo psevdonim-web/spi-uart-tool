@@ -110,8 +110,6 @@ class MainWindow:
                 if not d.known:
                     self.log(f"[warn] Unknown WCH device (0x{d.pid:04x}). "
                              f"Programmer may not work.")
-                    self.log("[warn] Go to Settings and enter PID manually "
-                             "if you know it.")
         except Exception as e:
             self.log(f"[err] USB scan failed: {e}")
 

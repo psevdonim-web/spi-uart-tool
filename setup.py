@@ -24,8 +24,27 @@ def collect_dir(src_dir, target_rel):
 
 
 # Tcl/Tk paths (Homebrew, Intel Mac)
-TCL_SRC = "/usr/local/Cellar/tcl-tk/9.0.4/lib/tcl9.0"
-TK_SRC = "/usr/local/Cellar/tcl-tk/9.0.4/lib/tk9.0"
+# Version is discovered dynamically: survives "brew upgrade tcl-tk".
+import glob
+
+
+def _find_tcl_tk():
+    """Find tcl/tk dirs in Homebrew Cellar. Returns (tcl_dir, tk_dir)."""
+    candidates = sorted(
+        glob.glob("/usr/local/Cellar/tcl-tk/*/lib/tcl9.0"),
+        reverse=True,
+    )
+    if not candidates:
+        raise RuntimeError(
+            "tcl-tk not found in /usr/local/Cellar. "
+            "Install it first: brew install tcl-tk"
+        )
+    tcl_dir = candidates[0]
+    tk_dir = tcl_dir.replace("/tcl9.0", "/tk9.0")
+    return tcl_dir, tk_dir
+
+
+TCL_SRC, TK_SRC = _find_tcl_tk()
 
 DATA_FILES = []
 DATA_FILES += collect_dir(TCL_SRC, "lib/tcl9.0")
@@ -57,13 +76,13 @@ OPTIONS = {
     "plist": {
         "CFBundleName": "SPI and UART Tool",
         "CFBundleDisplayName": "SPI & UART Tool",
-        "CFBundleIdentifier": "com.syao.spi-uart-tool",
-        "CFBundleVersion": "0.1.0",
-        "CFBundleShortVersionString": "0.1.0",
+        "CFBundleIdentifier": "com.psevdonim-web.spi-uart-tool",
+        "CFBundleVersion": "0.2.0",
+        "CFBundleShortVersionString": "0.2.0",
         "NSHighResolutionCapable": True,
         "LSMinimumSystemVersion": "10.13",
     },
-    "iconfile": None,
+    "iconfile": os.path.join(os.path.dirname(os.path.abspath(__file__)), "app.icns"),
 }
 
 setup(
