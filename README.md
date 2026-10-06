@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/platform-macOS%20Monterey%20(Intel)-blue" alt="Platform">
   <img src="https://img.shields.io/badge/python-3.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-GPLv3-green" alt="License">
-  <img src="https://img.shields.io/badge/version-0.1.0-orange" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.2.0-orange" alt="Version">
 </p>
 
 ---
@@ -148,7 +148,7 @@ pip3 install pyserial pyte usb-plug-notification-darwin py2app
 **Step 5.** Run from source:
 
 ```
-sudo venv/bin/python main.py
+venv/bin/python main.py
 ```
 
 **Step 6.** Build `.app`:
