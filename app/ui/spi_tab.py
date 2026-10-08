@@ -36,6 +36,7 @@ class SpiTab(ttk.Frame):
         self.lib_ready = lib_ready
         self.logger = logger
         self.config = config
+        self._busy = False
 
         self.last_dump_path = None
         self.last_dump_sha = None
@@ -132,6 +133,16 @@ class SpiTab(ttk.Frame):
                                      highlightthickness=0, bd=0)
         self.prog_canvas.grid(row=2, column=1, sticky="ew",
                               padx=(3, 2), pady=(6, 12))
+        self._last_progress = 0
+        self._last_progress_color = None
+        self.prog_canvas.bind("<Configure>", self._redraw_progress)
+
+        self.prog_label_var = tk.StringVar(value="")
+        self.prog_label = tk.Label(bottom, textvariable=self.prog_label_var,
+                                   font=("Menlo", 10), anchor="w")
+        self.prog_label.grid(row=2, column=2, sticky="w",
+                             padx=(6, 12), pady=(6, 12))
+
 
         # ---------- Middle: log ----------
         log_frame = ttk.LabelFrame(self, text="SPI log")
@@ -150,6 +161,11 @@ class SpiTab(ttk.Frame):
 
         attach_text_context_menu(self.log)
 
+        self._other_buttons = [
+            self.btn_detect, self.btn_refresh_chips,
+            self.btn_browse,
+        ]
+
         if self.lib_ready:
             self.log_write("[sys] SPI log ready. Programmer is open.")
         else:
@@ -165,7 +181,30 @@ class SpiTab(ttk.Frame):
             pass
 
     def set_progress(self, value: int, max_value: int = 100, color=None):
+        self._last_progress = value
+        self._last_progress_color = color
         draw_progress(self.prog_canvas, value, max_value, color=color)
+        _LABELS = {
+            PROG_READ: "Read",
+            PROG_VERIFY: "Verify",
+            PROG_WRITE: "Write",
+            PROG_ERASE: "Erase",
+        }
+        text = _LABELS.get(color, "")
+        self.prog_label_var.set(text)
+        self.prog_label.config(fg=color or PROG_DEFAULT)
+
+    def set_result(self, ok: bool):
+        if ok:
+            self.prog_label_var.set("OK")
+            self.prog_label.config(fg=PROG_READ)
+        else:
+            self.prog_label_var.set("Failed")
+            self.prog_label.config(fg=PROG_WRITE)
+
+    def _redraw_progress(self, event=None):
+        draw_progress(self.prog_canvas, self._last_progress,
+                      color=self._last_progress_color)
 
     def update_lib(self, lib, lib_ready: bool):
         self.lib = lib
@@ -192,10 +231,15 @@ class SpiTab(ttk.Frame):
         path = self.config.get("dumps_dir") or "~/Documents/SPI_UART_Tool/dumps"
         return os.path.expanduser(path)
 
-    def _block_buttons(self, blocked: bool):
-        state = "disabled" if blocked else "normal"
+    def _block_buttons(self, blocked: bool, active_btn=None):
+        self._busy = blocked
         for btn in self._op_buttons:
-            btn.config(state=state)
+            if blocked and btn is active_btn:
+                btn.config(state="disabled")
+            else:
+                btn.config(state="normal")
+        for btn in self._other_buttons:
+            btn.config(state="disabled" if blocked else "normal")
 
     def _ensure_cache_dir(self):
         os.makedirs(CACHE_DIR, exist_ok=True)
@@ -294,6 +338,8 @@ class SpiTab(ttk.Frame):
 
     # ---------- READ ----------
     def _on_read_click(self):
+        if self._busy:
+            return
         if not self.lib_ready:
             self.log_write("[err] Programmer is not open.")
             return
@@ -309,7 +355,7 @@ class SpiTab(ttk.Frame):
         ts = time.strftime("%Y%m%d_%H%M%S")
         out_path = os.path.join(CACHE_DIR, f"dump_{safe_chip}_{ts}.bin")
 
-        self._block_buttons(True)
+        self._block_buttons(True, self.btn_read)
         self.set_progress(0, color=PROG_READ)
         self.log_write(f"[sys] Reading chip ({chip})...")
         self.log_write(f"[sys] Temp file: {out_path}")
@@ -335,6 +381,7 @@ class SpiTab(ttk.Frame):
             self._block_buttons(False)
             if ok:
                 self.set_progress(100, color=PROG_READ)
+                self.set_result(True)
                 self.last_dump_path = out_path
                 self.last_dump_sha = sha
                 self.last_dump_size = (os.path.getsize(out_path)
@@ -351,6 +398,7 @@ class SpiTab(ttk.Frame):
             else:
                 self.log_write(f"[err] {msg}")
                 self.set_progress(0)
+                self.set_result(False)
 
         run_in_background(self.root, work, lambda r, e: None)
 
@@ -388,6 +436,8 @@ class SpiTab(ttk.Frame):
 
     # ---------- WRITE ----------
     def _on_write_click(self):
+        if self._busy:
+            return
         if not self.lib_ready:
             self.log_write("[err] Programmer is not open.")
             return
@@ -419,7 +469,7 @@ class SpiTab(ttk.Frame):
             self.log_write("[sys] Write cancelled.")
             return
 
-        self._block_buttons(True)
+        self._block_buttons(True, self.btn_write)
         self.set_progress(0, color=PROG_WRITE)
         self.log_write(f"[sys] Writing to chip ({chip})...")
         self.log_write(f"[sys] File: {file_path}")
@@ -445,6 +495,7 @@ class SpiTab(ttk.Frame):
             self._block_buttons(False)
             if ok:
                 self.set_progress(100, color=PROG_WRITE)
+                self.set_result(True)
                 self.log_write(f"[ok] {msg}")
                 self.log_write(f"[ok] Time: {elapsed} s")
 
@@ -454,11 +505,14 @@ class SpiTab(ttk.Frame):
             else:
                 self.log_write(f"[err] {msg}")
                 self.set_progress(0)
+                self.set_result(False)
 
         run_in_background(self.root, work, lambda r, e: None)
 
     # ---------- VERIFY ----------
     def _on_verify_click(self):
+        if self._busy:
+            return
         if not self.lib_ready:
             self.log_write("[err] Programmer is not open.")
             return
@@ -481,7 +535,7 @@ class SpiTab(ttk.Frame):
     def _run_verify(self, file_path: str):
         chip = self._get_chip() or self.lib.get_name() or "auto"
 
-        self._block_buttons(True)
+        self._block_buttons(True, self.btn_verify)
         self.set_progress(0, color=PROG_VERIFY)
         self.log_write(f"[sys] Verifying chip ({chip}) against file:")
         self.log_write(f"[sys] {file_path}")
@@ -507,16 +561,20 @@ class SpiTab(ttk.Frame):
             self._block_buttons(False)
             if ok:
                 self.set_progress(100, color=PROG_VERIFY)
+                self.set_result(True)
                 self.log_write(f"[ok] {msg}")
                 self.log_write(f"[ok] Time: {elapsed} s")
             else:
                 self.log_write(f"[err] {msg}")
                 self.log_write(f"[err] Time: {elapsed} s")
+                self.set_result(False)
 
         run_in_background(self.root, work, lambda r, e: None)
 
     # ---------- ERASE ----------
     def _on_erase_click(self):
+        if self._busy:
+            return
         if not self.lib_ready:
             self.log_write("[err] Programmer is not open.")
             return
@@ -538,7 +596,7 @@ class SpiTab(ttk.Frame):
             self.log_write("[sys] Erase cancelled.")
             return
 
-        self._block_buttons(True)
+        self._block_buttons(True, self.btn_erase)
         self.set_progress(0, color=PROG_ERASE)
         self.log_write(f"[sys] Erasing chip ({chip})...")
 
@@ -562,10 +620,12 @@ class SpiTab(ttk.Frame):
             self._block_buttons(False)
             if ok:
                 self.set_progress(100, color=PROG_ERASE)
+                self.set_result(True)
                 self.log_write(f"[ok] {msg}")
                 self.log_write(f"[ok] Time: {elapsed} s")
             else:
                 self.log_write(f"[err] {msg}")
                 self.set_progress(0)
+                self.set_result(False)
 
         run_in_background(self.root, work, lambda r, e: None)

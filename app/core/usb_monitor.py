@@ -79,6 +79,14 @@ class UsbMonitor:
         self._stop.clear()
         self._detect_initial()
 
+        # Preload CoreFoundation symbols to avoid a race between the two
+        # listener threads (PyObjC lazy import).
+        import CoreFoundation
+        _ = (CoreFoundation.CFRunLoopAddSource,
+             CoreFoundation.CFRunLoopGetCurrent,
+             CoreFoundation.kCFRunLoopDefaultMode,
+             CoreFoundation.CFRunLoopRun)
+
         t_spi = threading.Thread(target=self._listen_spi, daemon=True)
         t_spi.start()
 

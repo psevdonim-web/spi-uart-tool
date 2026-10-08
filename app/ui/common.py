@@ -108,8 +108,12 @@ def make_tooltip(widget, text):
 def draw_progress(canvas, value, max_value=100, color=None):
     """Draw a progress bar. color — HEX fill color."""
     canvas.delete("all")
-    w = canvas.winfo_width() or 400
-    h = canvas.winfo_height() or 20
+    w = canvas.winfo_width()
+    if w < 10:
+        w = 400
+    h = canvas.winfo_height()
+    if h < 10:
+        h = 20
     ratio = max(0.0, min(1.0, value / max_value))
     fill_w = int(w * ratio)
     if color is None:
@@ -118,4 +122,4 @@ def draw_progress(canvas, value, max_value=100, color=None):
     canvas.create_rectangle(0, 0, fill_w, h, fill=color, outline="")
     canvas.create_text(w // 2, h // 2,
                        text=f"{int(ratio * 100)}%",
-                       fill="#ffffff", font=("Menlo", 10))
+                       fill=LOG_BG, font=("Menlo", 10))

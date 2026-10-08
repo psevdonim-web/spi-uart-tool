@@ -13,7 +13,7 @@
   <img src="https://img.shields.io/badge/platform-macOS%20Monterey%20(Intel)-blue" alt="Platform">
   <img src="https://img.shields.io/badge/python-3.14-blue" alt="Python">
   <img src="https://img.shields.io/badge/license-GPLv3-green" alt="License">
-  <img src="https://img.shields.io/badge/version-0.2.0-orange" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.3.0-orange" alt="Version">
 </p>
 
 ---
@@ -190,7 +190,6 @@ python3 setup.py py2app
 
 ## Known issues
 
-- Hotplug (SPI/UART switch) may not trigger on the first attempt
 - Occasional replacement characters (U+FFFD) in UART output
 - Minor visual glitches during window resize (500 ms debounce)
 

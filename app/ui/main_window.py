@@ -207,7 +207,7 @@ class MainWindow:
     # =========================================================
     def _build_topbar(self):
         topbar = ttk.Frame(self.root)
-        topbar.pack(side="top", fill="x")
+        topbar.pack(side="top", fill="x", pady=(10, 0))
 
         ttk.Label(topbar, text=APP_NAME,
                   font=("Helvetica", 13, "bold")).pack(side="left", padx=(12, 20))
@@ -222,7 +222,7 @@ class MainWindow:
             lbl.bind("<Button-1>", lambda e, n=name: self.show_section(n))
             self.section_labels[name] = lbl
 
-        self.lbl_prog_mode = ttk.Label(topbar, text="—", foreground="#808080")
+        self.lbl_prog_mode = ttk.Label(topbar, text="—", foreground="#808080", width=4)
         self.lbl_prog_mode.pack(side="right", padx=(0, 12))
 
         ttk.Label(topbar, text="Programmer:").pack(side="right", padx=(0, 6))

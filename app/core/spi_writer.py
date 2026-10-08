@@ -6,7 +6,7 @@ import ctypes
 import os
 from typing import Callable
 
-from .libflashrom import LibFlashrom
+from .libflashrom import LibFlashrom, PROGRESS_WRITE
 
 
 def write_chip(lib: LibFlashrom,
@@ -49,6 +49,8 @@ def write_chip(lib: LibFlashrom,
     last_pct = {"v": -1}
 
     def progress_cb(stage, current, total, user_data):
+        if stage != PROGRESS_WRITE:
+            return
         if total == 0:
             return
         pct = int(current * 100 / total)
